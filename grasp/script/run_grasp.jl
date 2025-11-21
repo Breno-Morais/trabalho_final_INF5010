@@ -36,17 +36,35 @@ function main()
         error("Failed to parse numeric arguments. Details: $e")
     end
 
-    println("Reading instance...")
-    n, e, t = read_dln_instance()
-    
-    start_time = time() 
+    try
+        println("Reading instance...")
+        n, e, t = read_dln_instance()
+        
+        start_time = time() 
 
-    min_deposits, assignments = grasp_solver(n, e, t, num_iterations, time_limit, alpha) 
-    
-    end_time = time() 
-    total_solve_time = end_time - start_time
-    
-    write_results(output_file_path, min_deposits, assignments, total_solve_time)
+        best_cost, assignments, initial_cost = grasp_solver(n, e, t, num_iterations, time_limit, alpha)
+
+        end_time = time() 
+        total_solve_time = end_time - start_time
+        
+        improvement_pct = 0.0
+        if initial_cost > 0
+            improvement_pct = 100 * (initial_cost - best_cost) / initial_cost
+        end
+        
+        println(stderr, "--- Statistics ---")
+        println(stderr, "Instance Size (n): $n")
+        println(stderr, "Initial Solution (SI): $initial_cost")
+        println(stderr, "Final Solution (SF): $best_cost")
+        println(stderr, "Improvement (%): $(round(improvement_pct, digits=2))%")
+        println(stderr, "Time: $(round(total_solve_time, digits=4))s")
+
+        write_results(output_file_path, best_cost, assignments, total_solve_time)
+
+    catch e
+        println(stderr, "Error: $e")
+        exit(1)
+    end
 end
 
 main()

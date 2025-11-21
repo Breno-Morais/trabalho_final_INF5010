@@ -64,7 +64,7 @@ function grasp_solver(n::Int, emissions::Vector{Int}, tolerances::Vector{Int}, n
         final_assignments[id] = dep.containers
     end
 
-    return best_sol.cost, final_assignments
+    return best_sol.cost, final_assignments, first_construction_cost
 end
 
 # --- Construction Phase ---

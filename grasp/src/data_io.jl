@@ -61,17 +61,17 @@ function write_output(io::IO, min_deposits::Union{Number, Nothing}, assignments:
         min_deposits_int = Int(round(min_deposits))
         
         println(io, "Minimum Deposits Found: $(min_deposits_int)")
-        println(io, "--- Container Assignments ---")
+        # println(io, "--- Container Assignments ---")
         
-        # Sort assignments by deposit ID for consistent output
-        sorted_deposits = sort(collect(keys(assignments)))
+        # # Sort assignments by deposit ID for consistent output
+        # sorted_deposits = sort(collect(keys(assignments)))
 
-        # Output format: Deposit ID | Container IDs
-        for deposit in sorted_deposits
-            containers = assignments[deposit]
-            container_list = join(containers, " ")
-            println(io, "$deposit $container_list")
-        end
+        # # Output format: Deposit ID | Container IDs
+        # for deposit in sorted_deposits
+        #     containers = assignments[deposit]
+        #     container_list = join(containers, " ")
+        #     println(io, "ID: $deposit | $container_list")
+        # end
     else
         println(io, "No feasible solution found.")
     end

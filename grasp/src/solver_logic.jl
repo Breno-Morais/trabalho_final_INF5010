@@ -20,6 +20,9 @@ end
 
 function grasp_solver(n::Int, emissions::Vector{Int}, tolerances::Vector{Int}, num_iterations::Int, time_limit::Float64, alpha::Float64)
     start_time = time()
+    if(num_iterations < 0)
+        num_iterations = typemax(Int)
+    end
     
     # Initialize best solution
     best_sol = generate_trivial_solution(n, emissions, tolerances)
@@ -29,8 +32,10 @@ function grasp_solver(n::Int, emissions::Vector{Int}, tolerances::Vector{Int}, n
 
     iter = 0
     while iter < num_iterations
-        if (time() - start_time) > time_limit
-            break
+        if(time_limit > 0)
+            if (time() - start_time) > time_limit
+                break
+            end
         end
         
         iter += 1
@@ -71,9 +76,6 @@ end
 
 function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances::Vector{Int}, alpha::Float64)
     unassigned = collect(1:n)
-    
-    # Sort by Tolerance Ascending (bottlenecks first)
-    sort!(unassigned, by = i -> tolerances[i])
 
     assignment = zeros(Int, n)
     deposits = Dict{Int, Deposit}()
@@ -81,7 +83,9 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
 
     while !isempty(unassigned)
         deposit_counter += 1
-        current_deposit_id = deposit_counter
+
+        # Sort unassigned dynamically (giving more priority to tolerance but still taking into account the emission)
+        sort!(unassigned, by = i -> tolerances[i] - (0.1 * emissions[i]))
         
         # Start new deposit with a seed from RCL
         rcl_size = max(1, floor(Int, length(unassigned) * alpha))
@@ -89,19 +93,19 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
         seed_item = unassigned[seed_idx]
         
         # Create new Deposit object with seed item
-        deposits[current_deposit_id] = Deposit(
+        deposits[deposit_counter] = Deposit(
             [seed_item], 
             emissions[seed_item], 
             tolerances[seed_item]
         )
-        assignment[seed_item] = current_deposit_id
+        assignment[seed_item] = deposit_counter
         deleteat!(unassigned, seed_idx)
         
         # Fill deposit
         can_add = true
         while can_add && !isempty(unassigned)
-            # Identify valid candidates based on CACHED deposit stats
-            current_dep = deposits[current_deposit_id]
+            # Identify valid candidates based on cached deposit stats
+            current_dep = deposits[deposit_counter]
             candidates = Int[]
             
             for (idx, item) in enumerate(unassigned)
@@ -123,7 +127,7 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
                 
                 # Update Deposit Object
                 add_to_deposit!(current_dep, selected_item, emissions, tolerances)
-                assignment[selected_item] = current_deposit_id
+                assignment[selected_item] = deposit_counter
                 
                 deleteat!(unassigned, selected_real_idx)
             end
@@ -168,7 +172,7 @@ function local_search!(sol::Solution, emissions::Vector{Int}, tolerances::Vector
                     target_dep = temp_targets[target_id]
                     
                     if can_insert(target_dep, item, emissions, tolerances)
-                        # Apply move to TEMPORARY target
+                        # Apply move to temp target
                         add_to_deposit!(target_dep, item, emissions, tolerances)
                         push!(moves, (item, target_id))
                         item_moved = true
@@ -183,7 +187,7 @@ function local_search!(sol::Solution, emissions::Vector{Int}, tolerances::Vector
             end
             
             if can_distribute_all
-                # Apply moves PERMANENTLY
+                # Apply moves perma
                 for (item, target_id) in moves
                     target_dep = sol.deposits[target_id]
                     add_to_deposit!(target_dep, item, emissions, tolerances)
@@ -221,4 +225,28 @@ function generate_trivial_solution(n::Int, emissions::Vector{Int}, tolerances::V
         deposits[i] = Deposit([i], emissions[i], tolerances[i])
     end
     return Solution(assignment, n, deposits)
+end
+
+# When removing 'item' from 'dep' (during a move in Local Search):
+function remove_from_deposit!(dep::Deposit, item::Int, emissions::Vector{Int}, tolerances::Vector{Int})
+    # 1. Remove item from vector
+    filter!(x -> x != item, dep.containers)
+    
+    # 2. Update Emission (Easy, O(1))
+    dep.current_emission -= emissions[item]
+    
+    # 3. Update Tolerance (Hard, O(N_items_in_deposit))
+    # We must scan remaining items to find the NEW limiting tolerance
+    if isempty(dep.containers)
+        dep.current_min_tolerance = typemax(Int) # Infinite if empty
+    else
+        # Re-scan is necessary because we don't know if the removed item was the bottleneck
+        new_min = typemax(Int)
+        for c in dep.containers
+            if tolerances[c] < new_min
+                new_min = tolerances[c]
+            end
+        end
+        dep.current_min_tolerance = new_min
+    end
 end

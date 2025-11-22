@@ -28,7 +28,7 @@ function main()
         end
 
         # Ensure non-negative values
-        if num_iterations < 0 || time_limit < 0
+        if num_iterations < 0 && time_limit < 0
             error("Number of iterations and time limit must be non-negative.")
         end
 

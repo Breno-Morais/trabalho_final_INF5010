@@ -84,7 +84,7 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
     while !isempty(unassigned)
         deposit_counter += 1
 
-        # Sort unassigned dynamically (giving more priority to tolerance but still taking into account the emission)
+        # Sort unassigned by giving more priority to tolerance but still taking into account the emission
         sort!(unassigned, by = i -> tolerances[i] - (0.1 * emissions[i]))
         
         # Start new deposit with a seed from RCL
@@ -92,12 +92,12 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
         seed_idx = rand(1:rcl_size)
         seed_item = unassigned[seed_idx]
         
-        # Create new Deposit object with seed item
         deposits[deposit_counter] = Deposit(
             [seed_item], 
             emissions[seed_item], 
             tolerances[seed_item]
         )
+
         assignment[seed_item] = deposit_counter
         deleteat!(unassigned, seed_idx)
         
@@ -118,7 +118,7 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
                 can_add = false
             else
                 # Greedy selection: Best Fit (Largest Emission)
-                sort!(candidates, by = i -> emissions[unassigned[i]], rev=true)
+                sort!(candidates, by = i -> emissions[unassigned[i]], rev=false)
                 
                 rcl_fill_size = max(1, floor(Int, length(candidates) * alpha))
                 selected_idx_idx = rand(1:rcl_fill_size)
@@ -140,13 +140,12 @@ end
 # --- Local Search Phase ---
 
 function local_search!(sol::Solution, emissions::Vector{Int}, tolerances::Vector{Int})
-    # Strategy: Try to empty small deposits into others
     improved = true
     while improved
         improved = false
         dep_ids = collect(keys(sol.deposits))
         
-        # Sort: try to empty smallest deposits first
+        # Tenta esvaziar os depósitos menores primeiro pois é mais fácil
         sort!(dep_ids, by = id -> length(sol.deposits[id].containers))
         
         for source_id in dep_ids
@@ -155,48 +154,69 @@ function local_search!(sol::Solution, emissions::Vector{Int}, tolerances::Vector
             source_dep = sol.deposits[source_id]
             items_to_move = copy(source_dep.containers)
             
-            moves = Tuple{Int, Int}[] # (item, target_deposit_id)
-            possible_targets = collect(keys(sol.deposits))
-            filter!(x -> x != source_id, possible_targets)
-            shuffle!(possible_targets)
-
-            # Snapshot state for feasibility checking
-            # We map ID -> temporary Deposit clone to simulate moves without breaking the loop
-            temp_targets = Dict(id => deepcopy(sol.deposits[id]) for id in possible_targets)
+            # Estrutura para guardar movimentos parciais antes de commitar (item, target_id)
+            potential_moves = Tuple{Int, Int}[]
             
+            # Snapshot das capacidades dos alvos para simulação
+            targets_snapshot = Dict{Int, Tuple{Int, Int}}()
+            for tid in keys(sol.deposits)
+                if tid != source_id
+                    t_dep = sol.deposits[tid]
+                    targets_snapshot[tid] = (t_dep.current_emission, t_dep.current_min_tolerance)
+                end
+            end
+
             can_distribute_all = true
             
             for item in items_to_move
-                item_moved = false
-                for target_id in possible_targets
-                    target_dep = temp_targets[target_id]
+                best_target = -1
+                min_slack = typemax(Int)
+                
+                # Tenta achar o melhor lugar para este item onde o
+                # melhor lugar é aquele onde sobra menos espaço, mas ainda cabe.
+                for (tid, stats) in targets_snapshot
+                    curr_e, curr_t = stats
                     
-                    if can_insert(target_dep, item, emissions, tolerances)
-                        # Apply move to temp target
-                        add_to_deposit!(target_dep, item, emissions, tolerances)
-                        push!(moves, (item, target_id))
-                        item_moved = true
-                        break
+                    # Simula
+                    new_emission = curr_e + emissions[item]
+                    new_tol = min(curr_t, tolerances[item])
+                    
+                    if new_emission <= new_tol
+                        slack = new_tol - new_emission
+                        # Critério de desempate: menor sobra
+                        if slack < min_slack
+                            min_slack = slack
+                            best_target = tid
+                        end
                     end
                 end
                 
-                if !item_moved
+                if best_target != -1
+                    push!(potential_moves, (item, best_target))
+                    # Atualiza o snapshot para que o próximo item considere a nova capacidade
+                    old_e, old_t = targets_snapshot[best_target]
+                    targets_snapshot[best_target] = (
+                        old_e + emissions[item], 
+                        min(old_t, tolerances[item])
+                    )
+                else
                     can_distribute_all = false
                     break
                 end
             end
             
             if can_distribute_all
-                # Apply moves perma
-                for (item, target_id) in moves
+                # Aplica os movimentos de verdade
+                for (item, target_id) in potential_moves
                     target_dep = sol.deposits[target_id]
                     add_to_deposit!(target_dep, item, emissions, tolerances)
                     sol.assignment[item] = target_id
                 end
+                
                 delete!(sol.deposits, source_id)
                 sol.cost -= 1
                 improved = true
-                break 
+                break
             end
         end
     end

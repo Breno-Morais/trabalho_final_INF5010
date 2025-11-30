@@ -25,9 +25,10 @@ function read_dln_instance()
     return n, emissions, tolerances
 end
 
-function solve_nuclear_waste_ilp(n::Int, e::Vector{Int}, t::Vector{Int})
+function solve_nuclear_waste_ilp(n::Int, e::Vector{Int}, t::Vector{Int}, time_limit::Float64=1800.0)
     M = sum(e) # Ainda em discussão
     model = Model(HiGHS.Optimizer)
+    set_time_limit_sec(model, time_limit)
 
     # --- Variáveis de Decisão ---
     @variable(model, x[i=1:n, j=1:n], Bin)
@@ -53,7 +54,9 @@ function solve_nuclear_waste_ilp(n::Int, e::Vector{Int}, t::Vector{Int})
 
     optimize!(model)
 
-    if termination_status(model) == MOI.OPTIMAL
+    status = termination_status(model)
+
+    if status == MOI.OPTIMAL || (status == MOI.TIME_LIMIT && has_values(model))
         min_deposits = objective_value(model)
         
         # Get the variable values for used deposits and container assignments
@@ -64,22 +67,28 @@ function solve_nuclear_waste_ilp(n::Int, e::Vector{Int}, t::Vector{Int})
             assignments[j] = [i for i in 1:n if value(x[i, j]) > 0.5] # x_ij = 1
         end
 
-        return min_deposits, assignments
+        return status, min_deposits
     else
         # Handle cases where the solver fails or finds no solution
         println("The model was not solved to optimality. Status: ", termination_status(model))
-        return nothing, nothing
+        return status, nothing
     end
 end
 
-n, e, t = read_dln_instance() 
+time_limit = length(ARGS) >= 1 ? parse(Float64, ARGS[1]) : 1800.0
 
-min_deposits, assignments = solve_nuclear_waste_ilp(n, e, t)
+n, e, t = read_dln_instance()
 
-if min_deposits !== nothing
-    println("Minimum number of deposits required: $(min_deposits)")
-    println("Container Assignments:")
-    for (deposit, containers) in assignments
-        println("  Deposit $deposit contains containers: $containers")
-    end
+start_t = time()
+status, obj_val = solve_nuclear_waste_ilp(n, e, t, time_limit)
+total_time = time() - start_t
+
+println("--- Results ---")
+println("Solver Status: $status")
+println("Total Execution Time: $(round(total_time, digits=4))s")
+
+if obj_val !== nothing
+    println("Objective Value (Deposits): $(Int(round(obj_val)))")
+else
+    println("Objective Value (Deposits): -")
 end

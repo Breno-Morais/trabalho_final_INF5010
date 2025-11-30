@@ -249,18 +249,13 @@ end
 
 # When removing 'item' from 'dep' (during a move in Local Search):
 function remove_from_deposit!(dep::Deposit, item::Int, emissions::Vector{Int}, tolerances::Vector{Int})
-    # 1. Remove item from vector
     filter!(x -> x != item, dep.containers)
-    
-    # 2. Update Emission (Easy, O(1))
+
     dep.current_emission -= emissions[item]
-    
-    # 3. Update Tolerance (Hard, O(N_items_in_deposit))
-    # We must scan remaining items to find the NEW limiting tolerance
+
     if isempty(dep.containers)
-        dep.current_min_tolerance = typemax(Int) # Infinite if empty
+        dep.current_min_tolerance = typemax(Int)
     else
-        # Re-scan is necessary because we don't know if the removed item was the bottleneck
         new_min = typemax(Int)
         for c in dep.containers
             if tolerances[c] < new_min

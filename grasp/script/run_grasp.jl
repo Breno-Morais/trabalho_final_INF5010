@@ -1,5 +1,3 @@
-using HiGHS 
-
 include("../src/data_io.jl")
 include("../src/solver_logic.jl")
 

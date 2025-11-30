@@ -7,7 +7,7 @@ OUTPUT_FILE="tuning_results.csv"
 SUMMARY_FILE="tuning_summary.csv"
 
 # --- Parâmetros ---
-ALPHAS=(0.1 0.3 0.5 0.7 0.9)
+ALPHAS=(0 0.1 0.3 0.5 0.7 0.9 1)
 ITERATIONS=-1       # negativo para usar apenas tempo limite
 TIME_LIMIT=300.0     # segundos
 NUM_SEEDS=5

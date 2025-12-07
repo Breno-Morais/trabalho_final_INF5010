@@ -4,13 +4,13 @@ INSTANCES_DIR="../../instances"
 SOLVER="run_grasp.jl"
 OUTPUT_FILE="final_benchmark.csv"
 
-ALPHA=0.4
+ALPHA=0.3
 SEED=42
 ITERATIONS=-1
-TIME_LIMIT=900.0 
+TIME_LIMIT=1800.0 
 
 echo "Instance;SI;SF;Gap_Inicial(%);Time(s)" > $OUTPUT_FILE
-echo "=== Iniciando Benchmark Final (30 min/instância) ==="
+echo "=== Iniciando Benchmark Final (15 min/instância) ==="
 echo "Alpha: $ALPHA | Seed: $SEED | Time Limit: ${TIME_LIMIT}s"
 
 for instance_path in $INSTANCES_DIR/dln*; do

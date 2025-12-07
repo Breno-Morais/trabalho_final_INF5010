@@ -83,10 +83,10 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
 
     while !isempty(unassigned)
         deposit_counter += 1
-
-        # Sort unassigned by giving more priority to tolerance but still taking into account the emission
-        sort!(unassigned, by = i -> tolerances[i] - (0.1 * emissions[i]))
         
+        # Prioriza criar depósitos com alta capacidade
+        sort!(unassigned, by = i -> tolerances[i] - (0.1 * emissions[i]), rev = true)
+
         # Start new deposit with a seed from RCL
         rcl_size = max(1, floor(Int, length(unassigned) * alpha))
         seed_idx = rand(1:rcl_size)
@@ -118,7 +118,7 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
                 can_add = false
             else
                 # Greedy selection: Best Fit (Largest Emission)
-                sort!(candidates, by = i -> emissions[unassigned[i]], rev=false)
+                sort!(candidates, by = i -> emissions[unassigned[i]], rev=true)
                 
                 rcl_fill_size = max(1, floor(Int, length(candidates) * alpha))
                 selected_idx_idx = rand(1:rcl_fill_size)

@@ -40,7 +40,7 @@ julia script/run_grasp.jl <OUTPUT_FILE> <ITERATIONS> <TIME_LIMIT> <ALPHA> <SEED>
 Exemplo:
 ```bash
 # Rodar com Alpha=0.4, 60 segundos de limite, Seed 42
-julia --project=. script/run_grasp.jl solucao.txt -1 60.0 0.4 42 < ../instances/dln01.txt
+julia --project=. script/run_grasp.jl solucao.txt -1 60.0 0.4 42 < ../instances/dln01.ins
 ```
 
 ## Scripts de Automação

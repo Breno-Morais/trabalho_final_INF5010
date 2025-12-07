@@ -23,7 +23,7 @@ O solver lê a instância da entrada padrão (`stdin`) e aceita um limite de tem
 ```bash
 # Sintaxe: julia ILPSolver.jl [TIME_LIMIT_SEC] < [ARQUIVO_INSTANCIA]
 # Exemplo: Rodar na instância dln01 com limite de 60 segundos
-julia --project=. ILPSolver.jl 60 < ../instances/dln01.txt
+julia --project=. ILPSolver.jl 60 < ../instances/dln01.ins
 ```
 
 Se o limite de tempo for omitido, o padrão é 1800 segundos (30 minutos).

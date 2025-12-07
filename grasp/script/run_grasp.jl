@@ -69,6 +69,3 @@ function main()
 end
 
 main()
-
-# cat input | julia grasp/script/run_grasp.jl saida 100 3000 0.5
-# cat input | julia formulation/ILPSolver.jl

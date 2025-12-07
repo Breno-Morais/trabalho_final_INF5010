@@ -117,7 +117,7 @@ function construct_greedy_randomized(n::Int, emissions::Vector{Int}, tolerances:
             if isempty(candidates)
                 can_add = false
             else
-                # Greedy selection: Best Fit (Largest Emission)
+                # Best Fit (Largest Emission)
                 sort!(candidates, by = i -> emissions[unassigned[i]], rev=true)
                 
                 rcl_fill_size = max(1, floor(Int, length(candidates) * alpha))
